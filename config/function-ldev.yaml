@@ -26,16 +26,16 @@ spec:
           namespace: beyond-dev
       triggers:
         http:
-          - name: forward-auth
+          - name: forward-auth-test
             methods:
               - POST
             routeHost: ldev-beyond.soleaenergy.com
-            prefix: /int/function/forward-auth/
+            prefix: /poc/function/test/
   git:
     repository:
-      account: SoleaEnergy
+      account: khamonsol
       name: forward-auth-test
-      branch: dev
+      branch: main
   package:
     name: forward-auth-test
     env: forward-auth-test

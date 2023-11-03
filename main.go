@@ -1,4 +1,4 @@
-package forward_auth_test
+package main
 
 import (
 	"encoding/json"
