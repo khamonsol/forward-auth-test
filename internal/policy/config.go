@@ -1,21 +1,17 @@
-// Package policy provides structures and functions to manage and fetch access control
-// policies from a Kubernetes ConfigMap. It uses the in-cluster configuration method
-// to access the Kubernetes API, suitable for applications running within a Kubernetes cluster.
-// https://github.com/kubernetes/client-go/tree/master/examples/in-cluster-client-configuration
 package policy
 
 import (
 	"context"
 	"fmt"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"log/slog"
+	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"log/slog"
 )
 
 // KubernetesInterface defines the functions used from the Kubernetes client,
@@ -38,13 +34,11 @@ type Config struct {
 	client   KubernetesInterface // client is the interface to Kubernetes client, for real or testing use.
 }
 
-// NewConfig creates a new Config object using in-cluster configuration to communicate
-// with the Kubernetes API. It returns an initialized Config object or an error if the
-// in-cluster configuration setup fails.
-// // NewConfig creates a new Config object using in-cluster configuration to communicate
-// // with the Kubernetes API. It returns an initialized Config object or an error if the
-// // in-cluster configuration setup fails.
-func NewConfig() (*Config, error) {
+// newConfigFunc is a function variable that can be overridden in tests.
+var newConfigFunc = defaultNewConfig
+
+// defaultNewConfig is the default implementation of newConfigFunc.
+func defaultNewConfig() (*Config, error) {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		slog.Error("Error getting kubernetes config:", err)
@@ -60,6 +54,11 @@ func NewConfig() (*Config, error) {
 	}, nil
 }
 
+// NewConfig calls the function assigned to newConfigFunc to create a new configuration.
+func NewConfig() (*Config, error) {
+	return newConfigFunc()
+}
+
 // getCurrentNamespace fetches the namespace that the current client is operating within.
 // It attempts to load the client configuration from the default kubeconfig path,
 // then retrieves the namespace specified for the current context.
@@ -73,7 +72,7 @@ func getCurrentNamespace() string {
 	}
 	namespace := clientCfg.Contexts[clientCfg.CurrentContext].Namespace
 	if namespace == "" {
-		slog.Error("No namespace specified in the kubeconfig, defaulting to 'default'")
+		slog.Info("No namespace specified in the kubeconfig, defaulting to 'default'")
 		namespace = "default"
 	}
 	return namespace
@@ -108,7 +107,9 @@ func (c *Config) LoadConfig(host string) error {
 // GetPolicy retrieves the policy associated with the specified path and method.
 // It returns the policy and a boolean indicating if the policy was found.
 func (c *Config) GetPolicy(path, method string) (*Policy, error) {
-	key := fmt.Sprintf("%s_%s", strings.ReplaceAll(strings.ToLower(path), "/", "_"), strings.ToLower(method))
+	pathNoLeadingSlash := strings.ToLower(strings.TrimPrefix(path, "/"))
+	pathSlug := strings.ReplaceAll(pathNoLeadingSlash, "/", "_")
+	key := fmt.Sprintf("%s_%s", pathSlug, strings.ToLower(method))
 	policy, ok := c.Policies[key]
 	if !ok {
 		return nil, fmt.Errorf("policy %s not found", key)

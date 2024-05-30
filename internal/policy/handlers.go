@@ -57,9 +57,9 @@ func PolicyLoader(next http.Handler) http.Handler {
 // in the context; otherwise, it will return an error.
 func GetPolicyFromRequest(r *http.Request) (Policy, error) {
 	ctx := r.Context()
-	val, ok := ctx.Value(policyHeaderKey).(Policy)
+	val, ok := ctx.Value(policyHeaderKey).(*Policy)
 	if !ok {
 		return Policy{}, errors.New("policy data not found in request context; ensure PolicyLoader middleware is configured properly")
 	}
-	return val, nil
+	return *val, nil
 }
