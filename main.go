@@ -11,6 +11,10 @@ import (
 	"time"
 )
 
+func setupHandlerChain() http.Handler {
+
+}
+
 // main is the entry point of the forward auth server.
 func main() {
 	// Load server configuration

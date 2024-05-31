@@ -6,6 +6,7 @@ package server
 import (
 	"github.com/reMarkable/envconfig/v2"
 	"log/slog"
+	"sync"
 )
 
 // Config holds the configuration necessary for the server to validate JWT tokens.
@@ -17,15 +18,25 @@ type Config struct {
 	ValidAlgs         string `envconfig:"VALID_ALGS" default:"RS256"`                  // ValidAlgs is a comma-separated list of valid signing algorithms. This depends on your OIDC provider
 }
 
+var (
+	config          Config
+	once            sync.Once
+	configInitError error
+)
+
 // LoadConfig initializes a Config object from environment variables using the envconfig package.
 // It logs a fatal error and exits the application if there is an error during loading,
 // ensuring that the server does not start with invalid or incomplete configuration settings.
 func LoadConfig() Config {
-	var config Config
-	err := envconfig.Process("", &config)
-	if err != nil {
-		slog.Error("Failed to load environment variables", "error", err)
-		panic(err)
+	once.Do(func() {
+		err := envconfig.Process("", &config)
+		if err != nil {
+			slog.Error("Failed to load environment variables", "error", err)
+			configInitError = err
+		}
+	})
+	if configInitError != nil {
+		panic(configInitError)
 	}
 	return config
 }

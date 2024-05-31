@@ -35,6 +35,28 @@ func TestLoadConfig(t *testing.T) {
 	assert.Len(t, config.Policies["api_data_get"].Users, 1, "Should have one user.")
 }
 
+func TestLoadConfig_InvalidFormat(t *testing.T) {
+	// Creating a fake client set with a predefined ConfigMap.
+	clientset := fake.NewSimpleClientset(&v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "access_policy_api_soleaenergy_com",
+			Namespace: "default",
+		},
+		Data: map[string]string{
+			"api_data_get": "roles\n  - admin\nusers:\n  - user1",
+		},
+	})
+
+	// Inject the fake client into the configuration.
+	config := &Config{
+		Client: clientset,
+	}
+
+	// Attempt to load the configuration.
+	err := config.LoadConfig("api.soleaenergy.com")
+	assert.Error(t, err, "LoadConfig should return an error")
+}
+
 func TestGetPolicy(t *testing.T) {
 	// Set up the configuration with predefined policies.
 	config := &Config{

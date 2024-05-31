@@ -27,6 +27,8 @@ func TestLoadConfig(t *testing.T) {
 func TestLoadConfig_DefaultHeader(t *testing.T) {
 	// Set only the required environment variable
 	os.Setenv("JWKS_URL", "https://example.com/.well-known/jwks.json")
+	// Make sure we get the default value for the token header
+	os.Unsetenv("ACCESS_TOKEN_HEADER")
 
 	// Ensure environment variables are unset after the test
 	defer func() {
@@ -46,4 +48,21 @@ func TestLoadConfig_MissingRequired(t *testing.T) {
 	assert.Panics(t, func() {
 		LoadConfig()
 	}, "Expected LoadConfig to panic when JWKS_URL is missing")
+}
+
+func TestLoadConfig_Singleton(t *testing.T) {
+	// Set environment variables for testing
+	os.Setenv("ACCESS_TOKEN_HEADER", "X-Access-Token")
+	os.Setenv("JWKS_URL", "https://example.com/.well-known/jwks.json")
+
+	// Ensure environment variables are unset after the test
+	defer func() {
+		os.Unsetenv("ACCESS_TOKEN_HEADER")
+		os.Unsetenv("JWKS_URL")
+	}()
+
+	config1 := LoadConfig()
+	config2 := LoadConfig()
+
+	assert.Equal(t, &config1, &config2, "Expected LoadConfig to return the same instance")
 }
