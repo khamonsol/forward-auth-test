@@ -24,7 +24,7 @@ func TestLoadConfig(t *testing.T) {
 
 	// Inject the fake client into the configuration.
 	config := &Config{
-		client: clientset,
+		Client: clientset,
 	}
 
 	// Attempt to load the configuration.
@@ -55,13 +55,13 @@ func TestGetPolicy(t *testing.T) {
 
 func TestNewConfig_Success(t *testing.T) {
 	// Mock the function within the test
-	originalNewConfig := newConfigFunc
-	newConfigFunc = func() (*Config, error) {
+	originalNewConfig := NewConfigFunc
+	NewConfigFunc = func() (*Config, error) {
 		// Create a fake clientset that will simulate the successful creation of a Kubernetes client
 		clientset := fake.NewSimpleClientset()
-		return &Config{client: clientset}, nil
+		return &Config{Client: clientset}, nil
 	}
-	defer func() { newConfigFunc = originalNewConfig }() // Restore the original function after the test
+	defer func() { NewConfigFunc = originalNewConfig }() // Restore the original function after the test
 
 	// Call the function that has been overridden for testing
 	config, err := NewConfig()
@@ -69,16 +69,16 @@ func TestNewConfig_Success(t *testing.T) {
 	// Assertions to ensure it behaves as expected
 	assert.NoError(t, err, "NewConfig should not return an error on success")
 	assert.NotNil(t, config, "Config should not be nil on successful creation")
-	assert.Implements(t, (*KubernetesInterface)(nil), config.client, "The client should implement KubernetesInterface")
+	assert.Implements(t, (*KubernetesInterface)(nil), config.Client, "The client should implement KubernetesInterface")
 }
 
 func TestNewConfig_Failure(t *testing.T) {
 	// Mock the function within the test to simulate a failure in acquiring the Kubernetes configuration
-	originalNewConfig := newConfigFunc
-	newConfigFunc = func() (*Config, error) {
+	originalNewConfig := NewConfigFunc
+	NewConfigFunc = func() (*Config, error) {
 		return nil, errors.New("failed to obtain Kubernetes config")
 	}
-	defer func() { newConfigFunc = originalNewConfig }() // Restore the original function after the test
+	defer func() { NewConfigFunc = originalNewConfig }() // Restore the original function after the test
 
 	// Call the function that has been overridden for testing
 	config, err := NewConfig()

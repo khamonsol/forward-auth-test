@@ -1,8 +1,9 @@
-package policy
+package middleware
 
 import (
 	"context"
 	"errors"
+	"github.com/SoleaEnergy/forwardAuth/internal/policy"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -23,7 +24,7 @@ func (m *MockKubernetesClient) CoreV1() corev1.CoreV1Interface {
 	return m.clientset.CoreV1()
 }
 
-func mockNewConfigWithConfigMap() (*Config, error) {
+func mockNewConfigWithConfigMap() (*policy.Config, error) {
 	clientset := fake.NewSimpleClientset(&v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "access_policy_example_com",
@@ -33,13 +34,13 @@ func mockNewConfigWithConfigMap() (*Config, error) {
 			"api_data_get": "roles:\n  - admin\nusers:\n  - user1",
 		},
 	})
-	return &Config{client: &MockKubernetesClient{clientset: clientset}}, nil
+	return &policy.Config{Client: &MockKubernetesClient{clientset: clientset}}, nil
 }
 
 func TestPolicyLoader_Success(t *testing.T) {
-	originalNewConfig := newConfigFunc
-	newConfigFunc = mockNewConfigWithConfigMap
-	defer func() { newConfigFunc = originalNewConfig }()
+	originalNewConfig := policy.NewConfigFunc
+	policy.NewConfigFunc = mockNewConfigWithConfigMap
+	defer func() { policy.NewConfigFunc = originalNewConfig }()
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		// Manually load the policy into the request context to simulate a successful load.
@@ -56,7 +57,7 @@ func TestPolicyLoader_Success(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}
 
-	testHandler := PolicyLoader(http.HandlerFunc(handler))
+	testHandler := PolicyLoaderHandler(http.HandlerFunc(handler))
 	req := httptest.NewRequest("GET", "http://example.com/api/data", nil)
 	w := httptest.NewRecorder()
 
@@ -66,23 +67,23 @@ func TestPolicyLoader_Success(t *testing.T) {
 }
 
 func TestPolicyLoader_Failure_LoadConfig(t *testing.T) {
-	originalNewConfig := newConfigFunc
-	newConfigFunc = func() (*Config, error) {
+	originalNewConfig := policy.NewConfigFunc
+	policy.NewConfigFunc = func() (*policy.Config, error) {
 		return nil, errors.New("failed to load configuration")
 	}
-	defer func() { newConfigFunc = originalNewConfig }() // Reset after test
+	defer func() { policy.NewConfigFunc = originalNewConfig }() // Reset after test
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}
 
-	testHandler := PolicyLoader(http.HandlerFunc(handler))
+	testHandler := PolicyLoaderHandler(http.HandlerFunc(handler))
 	req := httptest.NewRequest("GET", "http://example.com/api/data", nil)
 	w := httptest.NewRecorder()
 
 	testHandler.ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusInternalServerError, w.Code, "Expected HTTP status 500 Internal Server Error")
+	assert.Equal(t, http.StatusForbidden, w.Code, "Expected HTTP status 500 Internal Server Error")
 }
 
 func TestGetPolicyFromRequest_NoPolicy(t *testing.T) {

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,7 +18,7 @@ func TestHandleError(t *testing.T) {
 	statusCode := http.StatusInternalServerError
 
 	// Call the HandleError function
-	HandleError(rr, errMessage, statusCode)
+	HandleError(rr, errMessage, statusCode, "123")
 
 	// Check that the status code was set correctly
 	assert.Equal(t, http.StatusForbidden, rr.Code)
@@ -33,10 +32,8 @@ func TestHandleError(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Check that the error message contains the expected text
-	expectedErrorMsg := "Error occurred, please contact support. Reference correlation ID:"
-	assert.True(t, strings.Contains(response.Error, expectedErrorMsg))
+	expectedErrorMsg := "Error occurred, please contact support. Reference correlation ID: 123"
 
-	// Check that the correlation ID is a valid UUID without hyphens
-	assert.Len(t, response.CorrelationID, 32)
-	assert.NotContains(t, response.CorrelationID, "-")
+	assert.Equal(t, response.Error, expectedErrorMsg)
+
 }

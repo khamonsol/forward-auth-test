@@ -4,11 +4,8 @@ package util
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"strings"
-
-	"github.com/google/uuid"
 	"log/slog" // Assuming slog is your structured logger
+	"net/http"
 )
 
 // ErrorResponse defines the structure of the JSON response body for error messages.
@@ -21,9 +18,7 @@ type ErrorResponse struct {
 // HandleError logs the error and sends a JSON response with a correlation ID.
 // If an internal server error occurs, it logs the error and returns a 403 Forbidden status,
 // using the correlation ID for internal tracking and future diagnostics.
-func HandleError(w http.ResponseWriter, errMessage string, statusCode int) {
-	correlationID := strings.Replace(uuid.New().String(), "-", "", -1) // Generate a new UUID for the correlation ID
-
+func HandleError(w http.ResponseWriter, errMessage string, statusCode int, correlationID string) {
 	// Log the error with slog along with the correlation ID
 	slog.Error(errMessage, "correlationId", correlationID, "status", statusCode)
 
@@ -38,7 +33,7 @@ func HandleError(w http.ResponseWriter, errMessage string, statusCode int) {
 	w.WriteHeader(statusCode)
 
 	// Create the error response with the correlation ID
-	msg := fmt.Sprintf("Error occured, please contact support. Refernce correlation ID: %s", correlationID)
+	msg := fmt.Sprintf("Error occurred, please contact support. Reference correlation ID: %s", correlationID)
 	response := ErrorResponse{
 		Error:         msg,
 		CorrelationID: correlationID,

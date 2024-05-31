@@ -1,9 +1,10 @@
-package policy
+package middleware
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/SoleaEnergy/forwardAuth/internal/policy"
 	"github.com/SoleaEnergy/forwardAuth/internal/util"
 	"net/http"
 )
@@ -12,26 +13,27 @@ import (
 // It is used to retrieve the policy data within downstream handlers.
 const policyHeaderKey = "POLICY"
 
-// PolicyLoader is an HTTP middleware that intercepts the request to load and attach
+// PolicyLoaderHandler is an HTTP middleware that intercepts the request to load and attach
 // the appropriate policy configuration based on the request details. It performs
 // three main actions: it initializes a new configuration, loads the specific policy
 // based on the request's host, and then fetches the specific policy for the requested
 // path and method. If any step fails, it sends an HTTP error response.
 
-func PolicyLoader(next http.Handler) http.Handler {
+func PolicyLoaderHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		correlationID := GetAuthRequestTxId(r)
 		// Initialize and load the configuration based on the host of the request.
-		policyConfig, err := NewConfig()
+		policyConfig, err := policy.NewConfig()
 		if err != nil {
 			msg := fmt.Sprintf("Failed to load config map error: %v", err)
-			http.Error(w, msg, http.StatusInternalServerError)
+			util.HandleError(w, msg, http.StatusInternalServerError, correlationID)
 			return
 		}
 
 		err = policyConfig.LoadConfig(r.Host)
 		if err != nil {
 			msg := fmt.Sprintf("Failed to load policy configuration for host %s error: %v", r.Host, err)
-			util.HandleError(w, msg, http.StatusInternalServerError)
+			util.HandleError(w, msg, http.StatusInternalServerError, correlationID)
 			return
 		}
 
@@ -39,7 +41,7 @@ func PolicyLoader(next http.Handler) http.Handler {
 		policy, err := policyConfig.GetPolicy(r.URL.Path, r.Method)
 		if err != nil {
 			msg := fmt.Sprintf("Failed to load policy for path %s method: %v", r.URL.Path, r.Method)
-			http.Error(w, msg, http.StatusInternalServerError)
+			util.HandleError(w, msg, http.StatusInternalServerError, correlationID)
 			return
 		}
 
@@ -55,11 +57,11 @@ func PolicyLoader(next http.Handler) http.Handler {
 // This function is intended to be used by downstream handlers that need to access
 // the policy associated with the request. It assumes that the policy data exists
 // in the context; otherwise, it will return an error.
-func GetPolicyFromRequest(r *http.Request) (Policy, error) {
+func GetPolicyFromRequest(r *http.Request) (policy.Policy, error) {
 	ctx := r.Context()
-	val, ok := ctx.Value(policyHeaderKey).(*Policy)
+	val, ok := ctx.Value(policyHeaderKey).(*policy.Policy)
 	if !ok {
-		return Policy{}, errors.New("policy data not found in request context; ensure PolicyLoader middleware is configured properly")
+		return policy.Policy{}, errors.New("policy data not found in request context; ensure PolicyLoaderHandler middleware is configured properly")
 	}
 	return *val, nil
 }

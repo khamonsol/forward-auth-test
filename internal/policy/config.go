@@ -31,13 +31,13 @@ type Policy struct {
 // and manage the access control policies.
 type Config struct {
 	Policies map[string]Policy   // Policies maps request paths and methods to access policies.
-	client   KubernetesInterface // client is the interface to Kubernetes client, for real or testing use.
+	Client   KubernetesInterface // Client is the interface to Kubernetes Client, for real or testing use.
 }
 
-// newConfigFunc is a function variable that can be overridden in tests.
-var newConfigFunc = defaultNewConfig
+// NewConfigFunc is a function variable that can be overridden in tests.
+var NewConfigFunc = defaultNewConfig
 
-// defaultNewConfig is the default implementation of newConfigFunc.
+// defaultNewConfig is the default implementation of NewConfigFunc.
 func defaultNewConfig() (*Config, error) {
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -50,13 +50,13 @@ func defaultNewConfig() (*Config, error) {
 		return nil, err
 	}
 	return &Config{
-		client: clientset,
+		Client: clientset,
 	}, nil
 }
 
 // NewConfig calls the function assigned to newConfigFunc to create a new configuration.
 func NewConfig() (*Config, error) {
-	return newConfigFunc()
+	return NewConfigFunc()
 }
 
 // getCurrentNamespace fetches the namespace that the current client is operating within.
@@ -86,7 +86,7 @@ func (c *Config) LoadConfig(host string) error {
 	configMapName := fmt.Sprintf("access_policy_%s", snakeCaseHost)
 	namespace := getCurrentNamespace()
 
-	cm, err := c.client.CoreV1().ConfigMaps(namespace).Get(context.Background(), configMapName, metav1.GetOptions{})
+	cm, err := c.Client.CoreV1().ConfigMaps(namespace).Get(context.Background(), configMapName, metav1.GetOptions{})
 	if err != nil {
 		msg := fmt.Sprintf("Error getting configmap %s/%s: %v", namespace, configMapName, err)
 		slog.Error(msg)
