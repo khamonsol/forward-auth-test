@@ -18,7 +18,8 @@ func SuccessHandler(w http.ResponseWriter, r *http.Request) {
 // users in the policy. If a match is found, it allows the request and skips further checks.
 func UserVerificationHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tokenString := r.Header.Get("Authorization")
+		sCfg := LoadConfig()
+		tokenString := r.Header.Get(sCfg.AccessTokenHeader)
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			// Omitted: return the public key for signature validation
 			return nil, nil
@@ -60,10 +61,11 @@ func UserVerificationHandler(next http.Handler) http.Handler {
 // the endpoint specified in the policy.
 func RoleVerificationHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tokenString := r.Header.Get("Authorization")
+		sCfg := LoadConfig()
+		tokenString := r.Header.Get(sCfg.AccessTokenHeader)
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			// Omitted: return the public key for signature validation
-			return nil, nil
+			// Return a dummy key since the token has already been validated.
+			return []byte("secret"), nil
 		})
 
 		if err != nil || !token.Valid {
@@ -77,10 +79,16 @@ func RoleVerificationHandler(next http.Handler) http.Handler {
 			return
 		}
 
-		roles := claims["roles"].([]interface{})
+		roles, ok := claims["roles"].([]interface{})
+		if !ok {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
 		accessPolicy, err := policy.GetPolicyFromRequest(r)
 		if err != nil {
 			util.HandleError(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		if !contains(roles, accessPolicy.Roles) {
@@ -109,11 +117,12 @@ func contains(jwtRoles []interface{}, requiredRoles []string) bool {
 
 // JwtValidationHandler returns http.Handler that validates JWT tokens using the cached JWKS.
 // It verifies that the token has not been altered by checking its signature against the JWKS keys.
-func JwtValidationHandler(next http.Handler, config *Config) http.Handler {
+func JwtValidationHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tokenString := r.Header.Get(config.AccessTokenHeader)
+		sCfg := LoadConfig()
+		tokenString := r.Header.Get(sCfg.AccessTokenHeader)
 		if tokenString == "" {
-			http.Error(w, "Unauthorized: No token provided", http.StatusUnauthorized)
+			util.HandleError(w, "Unauthorized: No token provided", http.StatusUnauthorized)
 			return
 		}
 
@@ -126,7 +135,7 @@ func JwtValidationHandler(next http.Handler, config *Config) http.Handler {
 			return
 		}
 
-		_, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			keyID, ok := token.Header["kid"].(string)
 			if !ok {
 				return nil, fmt.Errorf("expected jwt to have 'kid' header")
@@ -140,7 +149,7 @@ func JwtValidationHandler(next http.Handler, config *Config) http.Handler {
 				return nil, fmt.Errorf("unable to get raw key for keyID %q: %w", keyID, err)
 			}
 			return pubKey, nil
-		})
+		}, jwt.WithValidMethods(strings.Split(sCfg.ValidAlgs, ",")))
 
 		if err != nil {
 			msg := fmt.Sprintf("JWT validation error: %v", err)
@@ -148,6 +157,12 @@ func JwtValidationHandler(next http.Handler, config *Config) http.Handler {
 			return
 		}
 
+		if !token.Valid {
+			http.Error(w, "Unauthorized: Invalid token", http.StatusUnauthorized)
+			return
+		}
+
+		// Token is valid, pass the request along
 		next.ServeHTTP(w, r)
 	})
 }

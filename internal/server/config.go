@@ -14,6 +14,7 @@ import (
 type Config struct {
 	AccessTokenHeader string `envconfig:"ACCESS_TOKEN_HEADER" default:"Authorization"` // AccessTokenHeader specifies the HTTP header name where the access token is expected. Default is "Authorization".
 	JwksUrl           string `envconfig:"JWKS_URL" required:"true"`                    // JwksUrl is the URL pointing to the JSON Web Key Set (JWKS) resource for validating JWT tokens. This field is required.
+	ValidAlgs         string `envconfig:"VALID_ALGS" default:"RS256"`                  // ValidAlgs is a comma-separated list of valid signing algorithms. This depends on your OIDC provider
 }
 
 // LoadConfig initializes a Config object from environment variables using the envconfig package.
