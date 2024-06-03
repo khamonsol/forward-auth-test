@@ -29,7 +29,7 @@ func TestJwtValidationHandler_Success(t *testing.T) {
 	defer teardown()
 
 	passedJwtValidation := false
-	// If the jwt validation hands off to the next handler, that means this test was a success.
+	// If the jwtops validation hands off to the next handler, that means this test was a success.
 	captureContextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		passedJwtValidation = true
 		SuccessHandler(w, r)
@@ -55,7 +55,7 @@ func TestJwtValidationHandler_Success(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
-	// If the jwt validation hands off to the next handler, that means the jwt successfully validated.
+	// If the jwtops validation hands off to the next handler, that means the jwtops successfully validated.
 	assert.True(t, passedJwtValidation)
 }
 
@@ -64,7 +64,7 @@ func TestJwtValidationHandler_Unauthorized_InvalidKid(t *testing.T) {
 	defer teardown()
 
 	passedJwtValidation := false
-	// If the jwt validation hands off to the next handler, that means this test was a success.
+	// If the jwtops validation hands off to the next handler, that means this test was a success.
 	captureContextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		passedJwtValidation = true
 		SuccessHandler(w, r)
@@ -97,7 +97,7 @@ func TestJwtValidationHandler_Unauthorized_MissingAlg(t *testing.T) {
 	teardown := setupTestJwtValidationHandler(t)
 	defer teardown()
 	passedJwtValidation := false
-	// If the jwt validation hands off to the next handler, that means this test was a success.
+	// If the jwtops validation hands off to the next handler, that means this test was a success.
 	captureContextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		passedJwtValidation = true
 		SuccessHandler(w, r)

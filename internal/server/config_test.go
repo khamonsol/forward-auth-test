@@ -9,13 +9,25 @@ import (
 
 func TestLoadConfig(t *testing.T) {
 	// Set environment variables for testing
-	os.Setenv("ACCESS_TOKEN_HEADER", "X-Access-Token")
-	os.Setenv("JWKS_URL", "https://example.com/.well-known/jwks.json")
+	err := os.Setenv("ACCESS_TOKEN_HEADER", "X-Access-Token")
+	if err != nil {
+		t.FailNow()
+	}
+	err = os.Setenv("JWKS_URL", "https://example.com/.well-known/jwks.json")
+	if err != nil {
+		t.FailNow()
+	}
 
 	// Ensure environment variables are unset after the test
 	defer func() {
-		os.Unsetenv("ACCESS_TOKEN_HEADER")
-		os.Unsetenv("JWKS_URL")
+		err := os.Unsetenv("ACCESS_TOKEN_HEADER")
+		if err != nil {
+			t.FailNow()
+		}
+		err = os.Unsetenv("JWKS_URL")
+		if err != nil {
+			t.FailNow()
+		}
 	}()
 
 	config := LoadConfig()
@@ -26,13 +38,22 @@ func TestLoadConfig(t *testing.T) {
 
 func TestLoadConfig_DefaultHeader(t *testing.T) {
 	// Set only the required environment variable
-	os.Setenv("JWKS_URL", "https://example.com/.well-known/jwks.json")
+	err := os.Setenv("JWKS_URL", "https://example.com/.well-known/jwks.json")
+	if err != nil {
+		t.FailNow()
+	}
 	// Make sure we get the default value for the token header
-	os.Unsetenv("ACCESS_TOKEN_HEADER")
+	err = os.Unsetenv("ACCESS_TOKEN_HEADER")
+	if err != nil {
+		t.FailNow()
+	}
 
 	// Ensure environment variables are unset after the test
 	defer func() {
-		os.Unsetenv("JWKS_URL")
+		err := os.Unsetenv("JWKS_URL")
+		if err != nil {
+			t.FailNow()
+		}
 	}()
 
 	config := LoadConfig()
@@ -43,7 +64,10 @@ func TestLoadConfig_DefaultHeader(t *testing.T) {
 
 func TestLoadConfig_MissingRequired(t *testing.T) {
 	// Unset environment variables to simulate missing required ones
-	os.Unsetenv("JWKS_URL")
+	err := os.Unsetenv("JWKS_URL")
+	if err != nil {
+		t.FailNow()
+	}
 
 	assert.Panics(t, func() {
 		LoadConfig()
@@ -52,13 +76,25 @@ func TestLoadConfig_MissingRequired(t *testing.T) {
 
 func TestLoadConfig_Singleton(t *testing.T) {
 	// Set environment variables for testing
-	os.Setenv("ACCESS_TOKEN_HEADER", "X-Access-Token")
-	os.Setenv("JWKS_URL", "https://example.com/.well-known/jwks.json")
+	err := os.Setenv("ACCESS_TOKEN_HEADER", "X-Access-Token")
+	if err != nil {
+		t.FailNow()
+	}
+	err = os.Setenv("JWKS_URL", "https://example.com/.well-known/jwks.json")
+	if err != nil {
+		t.FailNow()
+	}
 
 	// Ensure environment variables are unset after the test
 	defer func() {
-		os.Unsetenv("ACCESS_TOKEN_HEADER")
-		os.Unsetenv("JWKS_URL")
+		err := os.Unsetenv("ACCESS_TOKEN_HEADER")
+		if err != nil {
+			t.FailNow()
+		}
+		err = os.Unsetenv("JWKS_URL")
+		if err != nil {
+			t.FailNow()
+		}
 	}()
 
 	config1 := LoadConfig()

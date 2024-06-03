@@ -21,7 +21,7 @@ func GetAuthRequestTxId(r *http.Request) string {
 	ctx := r.Context()
 	val, ok := ctx.Value(authRequestTxIdKey).(string)
 	if !ok {
-		slog.Error("Unable to get correlation ID")
+		slog.Info("Unable to get correlation ID")
 	}
 	return val
 }

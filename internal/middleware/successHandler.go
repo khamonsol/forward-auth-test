@@ -4,12 +4,8 @@ import (
 	"net/http"
 )
 
-func SuccessHandler(w http.ResponseWriter, r *http.Request) {
-	// Respond with OK status to indicate successful authentication
-	hasValidUser := GetUserPolicyStatusFromContext(r)
-	hasValidRole := GetRolePolicyStatusFromContext(r)
-	if hasValidUser || hasValidRole {
+func SuccessHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}
-	w.WriteHeader(http.StatusUnauthorized)
+	})
 }
