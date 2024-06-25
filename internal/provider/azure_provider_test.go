@@ -1,65 +1,44 @@
 package provider
 
 import (
-	"context"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
 )
 
-type MockKubernetesClient struct {
-	clientset *fake.Clientset
-}
+func TestAzureConfig_LoadConfig_Success(t *testing.T) {
+	os.Setenv("AZURE_CLIENT_ID", "test-client-id")
+	os.Setenv("AZURE_TENANT_ID", "test-tenant-id")
+	os.Setenv("AZURE_ISSUER_URL", "https://issuer.url")
+	defer os.Unsetenv("AZURE_CLIENT_ID")
+	defer os.Unsetenv("AZURE_TENANT_ID")
+	defer os.Unsetenv("AZURE_ISSUER_URL")
 
-func NewMockKubernetesClient() *MockKubernetesClient {
-	return &MockKubernetesClient{
-		clientset: fake.NewSimpleClientset(),
-	}
-}
-
-func (m *MockKubernetesClient) GetConfigMap(namespace, name string) (*v1.ConfigMap, error) {
-	return m.clientset.CoreV1().ConfigMaps(namespace).Get(context.Background(), name, metav1.GetOptions{})
-}
-
-func TestAzureProviderConfig_LoadProviderConfig(t *testing.T) {
-	mockClient := NewMockKubernetesClient()
-	namespace := "default"
-	name := "azure_beyond_prod"
-
-	cm := &v1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Data: map[string]string{
-			"client_id": "your-client-id",
-			"tenant_id": "your-tenant-id",
-		},
-	}
-	_, err := mockClient.clientset.CoreV1().ConfigMaps(namespace).Create(context.Background(), cm, metav1.CreateOptions{})
+	config := &AzureConfig{Name: "test-azure-provider"}
+	err := config.LoadConfig()
 	assert.NoError(t, err)
-
-	providerConfig := NewConfig("azure", name, namespace)
-	assert.NotNil(t, providerConfig)
-
-	err = providerConfig.LoadProviderConfig(mockClient)
-	assert.NoError(t, err)
-	assert.Equal(t, "your-client-id", providerConfig.(*AzureProviderConfig).ClientID)
-	assert.Equal(t, "your-tenant-id", providerConfig.(*AzureProviderConfig).TenantID)
-	assert.Equal(t, "https://login.microsoftonline.com/your-tenant-id/v2.0", providerConfig.GetIssuerUrl())
+	assert.Equal(t, "test-client-id", config.ClientID)
+	assert.Equal(t, "test-tenant-id", config.TenantID)
+	assert.Equal(t, "https://issuer.url", config.IssuerURL)
 }
 
-func TestAzureProviderConfig_GetName(t *testing.T) {
-	providerConfig := NewConfig("azure", "azure_beyond_prod", "default")
-	assert.Equal(t, "azure_beyond_prod", providerConfig.GetName())
+func TestAzureConfig_LoadConfig_MissingEnvVars(t *testing.T) {
+	os.Unsetenv("AZURE_CLIENT_ID")
+	os.Unsetenv("AZURE_TENANT_ID")
+	os.Unsetenv("AZURE_ISSUER_URL")
+
+	config := &AzureConfig{Name: "test-azure-provider"}
+	err := config.LoadConfig()
+	assert.Error(t, err)
 }
 
-func TestAzureProviderConfig_GetIssuerUrl(t *testing.T) {
-	providerConfig := NewConfig("azure", "azure_beyond_prod", "default")
-	providerConfig.(*AzureProviderConfig).TenantID = "your-tenant-id"
-	providerConfig.(*AzureProviderConfig).IssuerURL = "https://login.microsoftonline.com/your-tenant-id/v2.0"
-	assert.Equal(t, "https://login.microsoftonline.com/your-tenant-id/v2.0", providerConfig.GetIssuerUrl())
+func TestAzureConfig_GetName(t *testing.T) {
+	config := &AzureConfig{Name: "test-azure-provider"}
+	assert.Equal(t, "test-azure-provider", config.GetName())
+}
+
+func TestAzureConfig_GetIssuerURL(t *testing.T) {
+	config := &AzureConfig{IssuerURL: "https://issuer.url"}
+	assert.Equal(t, "https://issuer.url", config.GetIssuerURL())
 }

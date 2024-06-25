@@ -6,14 +6,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewConfig(t *testing.T) {
-	providerConfig := NewConfig("azure", "azure_beyond_prod", "default")
-	assert.NotNil(t, providerConfig)
-	assert.Equal(t, "azure_beyond_prod", providerConfig.GetName())
+func TestNewConfig_AzureProvider(t *testing.T) {
+	name := "test-azure-provider"
+	config, err := NewConfig("AZURE_AUTH_PROVIDER", name)
+	assert.NoError(t, err)
+	assert.NotNil(t, config)
+	assert.Equal(t, name, config.GetName())
+}
 
-	azureConfig := providerConfig.(*AzureProviderConfig)
-	azureConfig.TenantID = "your-tenant-id"
-	azureConfig.IssuerURL = "https://login.microsoftonline.com/your-tenant-id/v2.0"
-
-	assert.Equal(t, "https://login.microsoftonline.com/your-tenant-id/v2.0", providerConfig.GetIssuerUrl())
+func TestNewConfig_UnsupportedProvider(t *testing.T) {
+	config, err := NewConfig("UNSUPPORTED_PROVIDER", "test")
+	assert.Error(t, err)
+	assert.Nil(t, config)
 }

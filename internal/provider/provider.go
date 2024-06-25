@@ -1,22 +1,20 @@
 package provider
 
 import (
-	"github.com/SoleaEnergy/forwardAuth/internal/util"
+	"fmt"
 )
 
-type Provider interface {
-	LoadProviderConfig(api util.KubernetesClient) error
+type Config interface {
+	LoadConfig() error
 	GetName() string
-	GetIssuerUrl() string
+	GetIssuerURL() string
 }
 
-func NewConfig(providerType string, name string) Provider {
+func NewConfig(providerType, name string) (Config, error) {
 	switch providerType {
-	case "azure":
-		return &AzureProviderConfig{
-			Name:      name
-		}
+	case "AZURE_AUTH_PROVIDER":
+		return &AzureConfig{Name: name}, nil
 	default:
-		return nil
+		return nil, fmt.Errorf("unsupported provider type: %s", providerType)
 	}
 }

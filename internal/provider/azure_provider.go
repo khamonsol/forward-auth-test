@@ -2,40 +2,31 @@ package provider
 
 import (
 	"fmt"
-	"github.com/SoleaEnergy/forwardAuth/internal/util"
+	"os"
 )
 
-type AzureProviderConfig struct {
-	ClientID   string `yaml:"client_id"`
-	TenantID   string `yaml:"tenant_id"`
-	SigningKey string `yaml:"signing_key"`
-	IssuerURL  string
-	JWKSURL    string
-	AuthURL    string
-	TokenURL   string
-	Name       string
+type AzureConfig struct {
+	Name      string
+	ClientID  string
+	TenantID  string
+	IssuerURL string
 }
 
-func (c *AzureProviderConfig) LoadProviderConfig(api util.KubernetesClient) error {
-	configMap, err := api.GetConfigMap(, c.Name)
-	if err != nil {
-		return fmt.Errorf("failed to load config map: %v", err)
+func (c *AzureConfig) LoadConfig() error {
+	c.ClientID = os.Getenv("AZURE_CLIENT_ID")
+	c.TenantID = os.Getenv("AZURE_TENANT_ID")
+	c.IssuerURL = os.Getenv("AZURE_ISSUER_URL")
+
+	if c.ClientID == "" || c.TenantID == "" || c.IssuerURL == "" {
+		return fmt.Errorf("missing required Azure configuration")
 	}
-
-	c.ClientID = configMap.Data["client_id"]
-	c.TenantID = configMap.Data["tenant_id"]
-	c.IssuerURL = fmt.Sprintf("https://login.microsoftonline.com/%s/v2.0", c.TenantID)
-	c.JWKSURL = fmt.Sprintf("https://login.microsoftonline.com/%s/discovery/v2.0/keys", c.TenantID)
-	c.AuthURL = fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/v2.0/authorize", c.TenantID)
-	c.TokenURL = fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/v2.0/token", c.TenantID)
-
 	return nil
 }
 
-func (c *AzureProviderConfig) GetName() string {
+func (c *AzureConfig) GetName() string {
 	return c.Name
 }
 
-func (c *AzureProviderConfig) GetIssuerUrl() string {
+func (c *AzureConfig) GetIssuerURL() string {
 	return c.IssuerURL
 }
